@@ -1,9 +1,9 @@
 import React, { useState, useContext } from "react";
+import { Link } from "react-router-dom"; 
 import Web3Modal from "web3modal";
 import { Web3Provider } from "@ethersproject/providers";
 import "./Header.css";
 import { WalletContext } from "../../contexts/WalletContext";
-import { Link } from "react-router-dom"; // Import Link for navigation
 
 const Header = () => {
   const { walletAddress, setWalletAddress } = useContext(WalletContext);
@@ -16,6 +16,7 @@ const Header = () => {
   const [setProvider] = useState(null);
 
   const connectWallet = async () => {
+    console.log("Connect Wallet button clicked");
     try {
       const providerOptions = {
         injected: {
@@ -44,9 +45,9 @@ const Header = () => {
       };
 
       const web3Modal = new Web3Modal({
-        cacheProvider: false,
-        providerOptions,
-        disableInjectedProvider: false,
+        cacheProvider: false, 
+        providerOptions, // MetaMask and Phantom
+        disableInjectedProvider: false, // If only want to use injected providers like MetaMask
       });
 
       const instance = await web3Modal.connect();
@@ -55,6 +56,7 @@ const Header = () => {
       const address = await signer.getAddress();
       setProvider(ethersProvider);
       setWalletAddress(address);
+      console.log("Connected wallet address:", address);
     } catch (error) {
       console.error("Could not connect wallet", error);
     }
@@ -69,7 +71,7 @@ const Header = () => {
 
   return (
     <div className="header-container">
-      <Link to="/">Betforge</Link>
+      <Link to="/">Betforge</Link> 
       <div className="nav-dropdowns">
         <div className="dropdown">
           <button className="dropdown-btn" onClick={() => toggleDropdown("sports")}>
@@ -77,11 +79,11 @@ const Header = () => {
           </button>
           {dropdowns.sports && (
             <div className="dropdown-content">
-              <Link to="/bet/soccer">Soccer</Link>
+              <Link to="/bet/soccer">Soccer</Link> 
               <Link to="/bet/basketball">Basketball</Link>
-              <Link to="/bet/tennis">Tennis</Link>
+              <Link to="/bet/tennis">Tennis</Link> 
               <Link to="/bet/olympics">Olympics</Link>
-              <Link to="/user-listed">User Listed</Link> {/* Added link */}
+              <Link to="/user-listed">User Listed</Link> 
             </div>
           )}
         </div>
@@ -91,10 +93,10 @@ const Header = () => {
           </button>
           {dropdowns.esports && (
             <div className="dropdown-content">
-              <Link to="/bet/valorant">Valorant</Link>
-              <Link to="/bet/csgo">CS:GO</Link>
-              <Link to="/bet/dota2">Dota 2</Link>
-              <Link to="/user-listed">User Listed</Link> {/* Added link */}
+              <Link to="/bet/valorant">Valorant</Link> 
+              <Link to="/bet/csgo">CS:GO</Link> 
+              <Link to="/bet/dota2">Dota 2</Link> 
+              <Link to="/user-listed">User Listed</Link> 
             </div>
           )}
         </div>
@@ -104,15 +106,15 @@ const Header = () => {
           </button>
           {dropdowns.casino && (
             <div className="dropdown-content">
-              <Link to="/bet/blackjack">Blackjack</Link>
+              <Link to="/bet/blackjack">Blackjack</Link> 
               <Link to="/bet/roulette">Roulette</Link>
-              <Link to="/bet/poker">Poker</Link>
-              <Link to="/user-listed">User Listed</Link> {/* Added link */}
+              <Link to="/bet/poker">Poker</Link> 
+              <Link to="/user-listed">User Listed</Link>
             </div>
           )}
         </div>
-        <Link to="/bridge">Bridge</Link> {/* Added Bridge link */}
       </div>
+      <Link to="/bridge" className="bridge-btn" style={{ fontSize: "26px" }}>⇄ Bridge</Link> 
       {!walletAddress ? (
         <button className="wallet-btn" onClick={connectWallet}>
           Connect Wallet
@@ -122,7 +124,7 @@ const Header = () => {
           <p className="wallet-address">Connected: {walletAddress}</p>
           <Link to="/my-collection">
             <button className="assets-btn">My Assets</button>
-          </Link>
+          </Link> {/* Updated to Link for MyCollection */}
         </div>
       )}
     </div>

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useAccount, usePublicClient } from "wagmi";
-import { NFTCardFooterSell } from "../../components/NFTCard/NFTCardFooterSell";
-import { erc721Abi } from "viem";
 import "./MyCollection.css";
 import { chainToChainConfig } from "../../Config";
+import { erc721Abi } from "viem";
 
 const MyCollection = () => {
   const { address, chain } = useAccount();
@@ -52,11 +51,16 @@ const MyCollection = () => {
   return (
     <div className="my-collection-container">
       <h1>My Collection</h1>
-      {userNFTs.map((nft, index) => (
-        <div key={index} className="nft-card">
-          <NFTCardFooterSell nft={nft} />
-        </div>
-      ))}
+      {userNFTs.length > 0 ? (
+        userNFTs.map((nft, index) => (
+          <div key={index} className="nft-card">
+            <p>NFT ID: {nft.id}</p>
+            <p>URI: {nft.uri}</p>
+          </div>
+        ))
+      ) : (
+        <p>No NFTs found in your collection.</p>
+      )}
     </div>
   );
 };

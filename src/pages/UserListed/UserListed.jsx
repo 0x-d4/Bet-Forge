@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { usePublicClient, useAccount } from "wagmi";
 import { marketAbi } from "../../abi/market"; 
-import { NFTCardFooterBuy } from "../../components/NFTCard/NFTCardFooterBuy";
-import { chainToChainConfig } from "../../Config";
 import "./UserListed.css";
+import { chainToChainConfig } from "../../Config";
 
 const UserListed = () => {
   const publicClient = usePublicClient();
@@ -31,11 +30,16 @@ const UserListed = () => {
   return (
     <div className="user-listed-container">
       <h1>Available NFTs</h1>
-      {listedNFTs.map((nft, index) => (
-        <div key={index} className="nft-card">
-          <NFTCardFooterBuy nft={nft} nftPrice={nft.price} />
-        </div>
-      ))}
+      {listedNFTs.length > 0 ? (
+        listedNFTs.map((nft, index) => (
+          <div key={index} className="nft-card">
+            <p>NFT ID: {nft.id}</p>
+            <p>Price: {nft.price}</p>
+          </div>
+        ))
+      ) : (
+        <p>No NFTs listed for sale.</p>
+      )}
     </div>
   );
 };
