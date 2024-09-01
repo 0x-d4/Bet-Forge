@@ -31,7 +31,7 @@ const Home = () => {
           priceRange="Price Range : 0.12BTC - 0.18BTC"
           description="Lorem ipsum ipsum dolor sit amet..."
           image={footballImage}
-          link="/details1"
+          link="/bet/soccer"
         />
         <HomeCard
           name="Basketball"
@@ -39,7 +39,7 @@ const Home = () => {
           priceRange="Price Range : 0.08BTC - 0.12BTC"
           description="Past memories with a touch of nostalgia..."
           image={basketballImage}
-          link="/details2"
+          link="/bet/basketball"
         />
         <HomeCard
           name="CS-GO"
@@ -47,7 +47,7 @@ const Home = () => {
           priceRange="Price Range : 0.15BTC - 0.20BTC"
           description="Capture the essence of the moment..."
           image={csgoImage}
-          link="/details3"
+          link="/bet/csgo"
         />
         <HomeCard
           name="Tennis"
@@ -55,7 +55,7 @@ const Home = () => {
           priceRange="Price Range : 0.11BTC - 0.16BTC"
           description="A new beginning, a new journey..."
           image={tennisImage}
-          link="/details4"
+          link="/bet/tennis"
         />
         <HomeCard
           name="Valorant"
@@ -63,7 +63,7 @@ const Home = () => {
           priceRange="Price Range : 0.09BTC - 0.14BTC"
           description="The beauty of the evening sky..."
           image={valorantImage}
-          link="/details5"
+          link="/bet/valorant"
         />
         <HomeCard
           name="Dota 2"
@@ -71,7 +71,7 @@ const Home = () => {
           priceRange="Price Range : 0.13BTC - 0.19BTC"
           description="The magic hour where day meets night..."
           image={dota2Image}
-          link="/details6"
+          link="/bet/dota2"
         />
       </div>
     </div>

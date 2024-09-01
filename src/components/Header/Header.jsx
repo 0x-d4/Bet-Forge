@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useRef } from "react";
 import { Link } from "react-router-dom"; 
 import Web3Modal from "web3modal";
 import { Web3Provider } from "@ethersproject/providers";
@@ -13,12 +13,14 @@ const Header = () => {
     casino: false,
   });
 
-  const [setProvider] = useState(null);
+  const [provider, setProvider] = useState(null);
+  const web3ModalRef = useRef(null);
 
-  const connectWallet = async () => {
-    console.log("Connect Wallet button clicked");
-    try {
-      const providerOptions = {
+  // Initialize Web3Modal only once
+  if (!web3ModalRef.current) {
+    web3ModalRef.current = new Web3Modal({
+      cacheProvider: true, 
+      providerOptions: {
         injected: {
           display: {
             name: "MetaMask",
@@ -42,15 +44,47 @@ const Header = () => {
             }
           }
         }
-      };
+      },
+      disableInjectedProvider: false,
+    });
+  }
 
-      const web3Modal = new Web3Modal({
-        cacheProvider: false, 
-        providerOptions, // MetaMask and Phantom
-        disableInjectedProvider: false, // If only want to use injected providers like MetaMask
-      });
+  const clearPreviousConnection = async () => {
+    try {
+      if (web3ModalRef.current) {
+        await web3ModalRef.current.clearCachedProvider();
+      }
+      if (provider && provider.provider && provider.provider.disconnect) {
+        await provider.provider.disconnect();
+      }
+      setProvider(null);
+    } catch (error) {
+      console.error("Failed to clear previous connection", error);
+    }
+  };
 
-      const instance = await web3Modal.connect();
+  const forceReconnect = async () => {
+    try {
+      if (window.ethereum) {
+        // Reset the Ethereum provider
+        await window.ethereum.request({
+          method: "wallet_requestPermissions",
+          params: [{ eth_accounts: {} }],
+        });
+      }
+    } catch (error) {
+      console.error("Error in forcing reconnect:", error);
+    }
+  };
+
+  const connectWallet = async () => {
+    console.log("Connect Wallet button clicked");
+
+    await clearPreviousConnection(); // Clear previous connection before attempting a new one
+
+    try {
+      await forceReconnect(); // Force a reset of MetaMask state
+      const instance = await web3ModalRef.current.connect();
       const ethersProvider = new Web3Provider(instance);
       const signer = ethersProvider.getSigner();
       const address = await signer.getAddress();
@@ -59,6 +93,13 @@ const Header = () => {
       console.log("Connected wallet address:", address);
     } catch (error) {
       console.error("Could not connect wallet", error);
+
+      if (error.code === -32002) {
+        // QOL improvement for case where MetaMask is already processing a request
+        alert("MetaMask is already processing a connection request. Please check MetaMask and try again.");
+      } else {
+        alert("Connection attempt failed. Please try again.");
+      }
     }
   };
 
@@ -124,7 +165,7 @@ const Header = () => {
           <p className="wallet-address">Connected: {walletAddress}</p>
           <Link to="/my-collection">
             <button className="assets-btn">My Assets</button>
-          </Link> {/* Updated to Link for MyCollection */}
+          </Link> 
         </div>
       )}
     </div>
