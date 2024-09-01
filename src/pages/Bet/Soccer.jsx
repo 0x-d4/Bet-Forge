@@ -41,6 +41,10 @@ const FootballEvents = () => {
     { title: "Manchester City", event: "Premier League - 3rd Place", price: 0.16, imageSrc: "mancity.png", link: "/bet/football/premier-league-3rd" },
     { title: "Manchester City", event: "FA Cup - Winner", price: 0.22, imageSrc: "mancity.png", link: "/bet/football/fa-cup-winner" },
     { title: "Manchester City", event: "FA Cup - Runner-up", price: 0.18, imageSrc: "mancity.png", link: "/bet/football/fa-cup-runnerup" },
+    { title: "Manchester City vs Liverpool", event: "FA Cup", price: 0.25, imageSrc: "mancity.png", link: "/bet/football/man-city-liverpool-fa-cup" },
+    { title: "Manchester City vs Everton", event: "Premier League", price: 0.20, imageSrc: "mancity.png", link: "/bet/football/man-city-everton-premier-league" },
+    { title: "Liverpool vs Chelsea", event: "Premier League", price: 0.22, imageSrc: "liverpool.png", link: "/bet/football/liverpool-chelsea-premier-league" },
+    { title: "Real Madrid vs Barcelona", event: "La Liga", price: 0.28, imageSrc: "realmadrid.png", link: "/bet/football/real-madrid-barcelona-la-liga" },
     // Add more items as needed
   ];
 
@@ -216,7 +220,7 @@ const FootballEvents = () => {
               <AssetCard
                 key={index}
                 title={bet.title}
-                price={`${bet.price} BTC`}
+                price={`${bet.price} ETH`}
                 imageSrc={bet.imageSrc}
                 link={bet.link}
                 eventType={bet.event}

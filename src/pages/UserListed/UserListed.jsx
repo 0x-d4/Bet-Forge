@@ -13,15 +13,20 @@ const UserListed = () => {
     const fetchListedNFTs = async () => {
       if (!chain) return;
 
-      const marketAddress = chainToChainConfig(chain).market;
+      try {
+        const marketAddress = chainToChainConfig(chain).market;
 
-      const listings = await publicClient.readContract({
-        address: marketAddress,
-        abi: marketAbi,
-        functionName: "getAllActiveListings", // Use the new function
-      });
+        const listings = await publicClient.readContract({
+          address: marketAddress,
+          abi: marketAbi,
+          functionName: "getAllActiveListings", // Use the new function
+        });
 
-      setListedNFTs(listings);
+        setListedNFTs(listings || []); // Default to an empty array if listings is undefined or null
+      } catch (error) {
+        console.error("Failed to fetch listings", error);
+        setListedNFTs([]); // Set to an empty array in case of an error
+      }
     };
 
     fetchListedNFTs();

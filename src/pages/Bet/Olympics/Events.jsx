@@ -154,7 +154,7 @@ const OlympicEvents = () => {
               <AssetCard
                 key={index}
                 title={athlete.title}
-                price={`${athlete.price} BTC`}
+                price={`${athlete.price} ETH`}
                 imageSrc={athlete.imageSrc}
                 link={athlete.link}
                 eventType={athlete.event}
