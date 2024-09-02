@@ -45,3 +45,5 @@ hardhat.config.js
 
 # Exclude my-ethereum-wallet file
 my-ethereum-wallet.json
+
+/my-ethereum-wallet.json

@@ -59,14 +59,11 @@ BetForge is redefining NFT sports betting by integrating real-world events with 
 
 ## Screenshots
 
-### Buy/Mint NFTs - Olympics Example
+### Buy/Mint NFTs
 ![Buy/Mint Olympics](src/assets/buy-mint_olympics.png)
 
-### Buy/Mint NFTs - Football Example
-![Buy/Mint Football](src/assets/buy-mint_football.png)
-
 ### View Assets
-![View Assets](src/assets/view-assets.png)
+![View Assets](src/assets/viewassets.png)
 
 ### Bridge Funds
 ![Bridge Funds](src/assets/bridge.png)

@@ -109,7 +109,7 @@ async function wrapAndTransferNFT(mintAddress: string): Promise<string> {
     log(`Starting wrap and transfer of NFT: ${mintAddress}`);
 
     log('Loading Ethereum private key');
-    const ethWalletPath = path.resolve('C:/Users/Patri/Wormhole/my-ethereum-wallet.json');
+    const ethWalletPath = path.resolve('redacted');
     const ethWalletData = JSON.parse(fs.readFileSync(ethWalletPath, 'utf8'));
     const ethPrivateKey = ethWalletData.privateKey;
 
