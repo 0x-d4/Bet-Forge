@@ -66,4 +66,4 @@ BetForge is redefining NFT sports betting by integrating real-world events with 
 ![View Assets](src/assets/viewassets.png)
 
 ### Bridge Funds
-![Bridge Funds](src/assets/bridge.png)
+![Bridge Funds](src/assets/bridge1.png)
