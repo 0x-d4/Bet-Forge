@@ -49,18 +49,20 @@ const MyCollection = () => {
   }, [address, chain, publicClient]);
 
   return (
-    <div className="my-collection-container">
-      <h1>My Collection</h1>
-      {userNFTs.length > 0 ? (
-        userNFTs.map((nft, index) => (
-          <div key={index} className="nft-card">
-            <p>NFT ID: {nft.id}</p>
-            <p>URI: {nft.uri}</p>
-          </div>
-        ))
-      ) : (
-        <p>No NFTs found in your collection.</p>
-      )}
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <h3 className="my-assets-header">My Assets</h3>
+      <div className="collections">
+        {userNFTs.length > 0 ? (
+          userNFTs.map((nft, index) => (
+            <div key={index} className="nft-card">
+              <img src={nft.uri} alt={`NFT ${nft.id}`} className="nft-image" />
+              <p className="nft-id">NFT ID: {nft.id}</p>
+            </div>
+          ))
+        ) : (
+          <p>No NFTs found in your collection.</p>
+        )}
+      </div>
     </div>
   );
 };

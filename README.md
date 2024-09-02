@@ -4,6 +4,8 @@
 
 BetForge is your all-in-one NFT sports betting platform, designed to bring the excitement of real-world events into the world of blockchain. By leveraging a multichain architecture and the power of Wormhole, BetForge allows users to mint, trade, and manage NFTs linked to real-world events across various blockchain networks.
 
+![Homepage](src/assets/homepage.png)
+
 ## Key Features
 
 - **Mint Event-Linked NFTs**: Users can mint NFTs tied to real-world events, with seamless bridging to the blockchain of their choice.
@@ -54,3 +56,17 @@ BetForge’s approach ensures that NFTs are only minted upon confirmed demand, m
 ---
 
 BetForge is redefining NFT sports betting by integrating real-world events with blockchain technology, offering users a unique and dynamic experience. Join us in this exciting journey and be part of the future of sports betting.
+
+## Screenshots
+
+### Buy/Mint NFTs - Olympics Example
+![Buy/Mint Olympics](src/assets/buy-mint_olympics.png)
+
+### Buy/Mint NFTs - Football Example
+![Buy/Mint Football](src/assets/buy-mint_football.png)
+
+### View Assets
+![View Assets](src/assets/view-assets.png)
+
+### Bridge Funds
+![Bridge Funds](src/assets/bridge.png)
