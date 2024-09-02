@@ -38,6 +38,7 @@ BetForge is your all-in-one NFT sports betting platform, designed to bring the e
 - **Support for More Chains**: Expansion to additional blockchain networks to increase accessibility.
 - **Dynamic Visuals**: Update NFT visuals alongside metadata based on event outcomes.
 - **Real-Time Price Updates**: Reflect real-time prices according to the user's connected chain.
+- **Online Casino**: An array of games for the user to bet their funds directly!
 
 ## Sustainable NFT Model
 
