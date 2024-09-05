@@ -1,0 +1,461 @@
+MINT:
+
+import express from 'express';
+import axios from 'axios';
+import FormData from 'form-data';
+import fs from 'fs';
+import path from 'path';
+import Jimp from 'jimp';
+import { Connection, Keypair, PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
+import { Metaplex, keypairIdentity } from "@metaplex-foundation/js";
+const GIFEncoder = require('gif-encoder-2');
+
+// Constants and configurations
+const QUICKNODE_RPC = 'https://api.devnet.solana.com';
+const PINATA_API_KEY = '';
+const PINATA_SECRET_API_KEY = '';
+const SECRET_KEY_PATH = '';
+const PLACEHOLDER_IMAGE_PATH = path.join('', 'placeholder.png');
+const SHINY_GIF_PATH = path.join('', 'shiny.gif');
+
+// Initialize Solana connection and Metaplex
+const SOLANA_CONNECTION = new Connection(QUICKNODE_RPC, { commitment: 'finalized' });
+const secretKey = JSON.parse(fs.readFileSync(path.resolve(SECRET_KEY_PATH), 'utf8'));
+const WALLET = Keypair.fromSecretKey(new Uint8Array(secretKey));
+const METAPLEX = Metaplex.make(SOLANA_CONNECTION).use(keypairIdentity(WALLET));
+
+// Function to upload image to Pinata
+async function uploadToPinata(imageBuffer: Buffer, filename: string): Promise<string> {
+  const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+  const data = new FormData();
+  data.append('file', imageBuffer, filename);
+
+  const response = await axios.post(url, data, {
+    headers: {
+      ...data.getHeaders(),
+      'pinata_api_key': PINATA_API_KEY,
+      'pinata_secret_api_key': PINATA_SECRET_API_KEY,
+    },
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
+  });
+
+  if (response.status === 200) {
+    return `https://ipfs.io/ipfs/${response.data.IpfsHash}`;
+  } else {
+    throw new Error(`Failed to upload image to Pinata: ${response.statusText}`);
+  }
+}
+
+// Function to upload JSON metadata to Pinata
+async function uploadJsonToPinata(jsonData: any, filename: string): Promise<string> {
+  const url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS';
+  const response = await axios.post(url, {
+    pinataContent: jsonData,
+    pinataMetadata: { name: filename }
+  }, {
+    headers: {
+      'pinata_api_key': PINATA_API_KEY,
+      'pinata_secret_api_key': PINATA_SECRET_API_KEY,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 200) {
+    return `https://ipfs.io/ipfs/${response.data.IpfsHash}`;
+  } else {
+    throw new Error(`Failed to upload JSON to Pinata: ${response.statusText}`);
+  }
+}
+
+// Function to create and mint the NFT
+async function createAndMintNFT(): Promise<{ mintAddress: string; metadataUrl: string }> {
+  try {
+    const name = 'Premier League: Man City 1st';
+    const metadataDescription = 'This NFT represents a bet placed on the Premier League for Manchester City achieving the 1st Place outcome. The result is currently pending, and this NFT acts as proof of your bet in the BetForge platform. Once the season concludes, the status and value of this NFT may change depending on the result. Stay tuned to see if your bet will bring you the rewards!';
+
+    // Read placeholder and shiny GIF
+    const placeholder = await Jimp.read(PLACEHOLDER_IMAGE_PATH);
+    const gifCodec = new (require('gifwrap').GifCodec)();
+    const shinyGif = await gifCodec.decodeGif(fs.readFileSync(SHINY_GIF_PATH));
+
+    // Create GIF encoder for the final image
+    const gifEncoder = new GIFEncoder(placeholder.bitmap.width, placeholder.bitmap.height);
+    gifEncoder.start();
+    gifEncoder.setRepeat(0); // loop indefinitely
+
+    // Loop through each frame of the shiny GIF
+    for (let i = 0; i < shinyGif.frames.length; i++) {
+      const shinyFrame = shinyGif.frames[i];
+      const shinyFrameImage = new Jimp({
+        data: shinyFrame.bitmap.data,
+        width: shinyFrame.bitmap.width,
+        height: shinyFrame.bitmap.height,
+      });
+
+      // Resize the shiny frame to fit the desired position
+      shinyFrameImage.resize(50, 50);
+
+      // Clone the placeholder to create the current frame
+      const frame = placeholder.clone();
+
+      // Composite shiny GIF frame on top-right corner of the placeholder
+      const xShinyOffset = placeholder.bitmap.width - shinyFrameImage.bitmap.width - 10;
+      const yShinyOffset = 10;
+      frame.composite(shinyFrameImage, xShinyOffset, yShinyOffset);
+
+      // Add the current frame to GIF encoder
+      gifEncoder.addFrame(frame.bitmap.data);
+      gifEncoder.setDelay(shinyFrame.delayCentisecs * 10); // Set the delay for the current frame
+    }
+
+    // Finish and save the GIF
+    gifEncoder.finish();
+    const buffer = gifEncoder.out.getData();
+    fs.writeFileSync('test001.gif', buffer);
+
+    // Upload GIF to Pinata
+    const imageUrl = await uploadToPinata(buffer, `${name}.gif`);
+
+    // Create metadata
+    const metadata = {
+      name,
+      description: metadataDescription,
+      image: imageUrl,
+      attributes: [
+        { trait_type: "Rarity", value: "Common" },
+        { trait_type: "Bet Status", value: "Pending" },
+        { trait_type: "Event", value: "Premier League - Manchester City: 1st Place" }
+      ]
+    };
+
+    // Upload metadata to Pinata
+    const metadataUrl = await uploadJsonToPinata(metadata, `${name}_metadata.json`);
+
+    // Mint NFT
+    const { nft } = await METAPLEX.nfts().create({
+      uri: metadataUrl,
+      name,
+      sellerFeeBasisPoints: 500,  // 5.00% seller fee
+      symbol: "WNFT",
+      creators: [
+        { address: WALLET.publicKey, share: 100 }
+      ]
+    });
+
+    const mintAddress = nft.address.toString();
+
+    // Transfer NFT (Optional if you want to immediately transfer the NFT)
+    // const { blockhash, lastValidBlockHeight } = await SOLANA_CONNECTION.getLatestBlockhash();
+    // const transferTransaction = METAPLEX.nfts().builders().transfer({
+    //   nftOrSft: nft,
+    //   toOwner: new PublicKey(walletAddress), // Add destination wallet address if needed
+    //   authority: WALLET,
+    // }).toTransaction({
+    //   blockhash,
+    //   lastValidBlockHeight,
+    // });
+    // transferTransaction.feePayer = WALLET.publicKey;
+    // const signature = await sendAndConfirmTransaction(SOLANA_CONNECTION, transferTransaction, [WALLET]);
+
+    console.log(`✅ - Minted NFT: ${mintAddress}`);
+    return { mintAddress, metadataUrl };
+  } catch (error) {
+    console.error('Minting failed:', error);
+    return { mintAddress: 'default_mint_address', metadataUrl: 'default_metadata_url' };
+  }
+}
+
+// Start the NFT minting process
+createAndMintNFT();
+
+
+Mint_And_Send_Example:
+import express from 'express';
+import axios from 'axios';
+import FormData from 'form-data';
+import fs from 'fs';
+import path from 'path';
+import Jimp from 'jimp';
+import { Connection, Keypair, PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
+import { Metaplex, keypairIdentity } from "@metaplex-foundation/js";
+const GIFEncoder = require('gif-encoder-2');
+
+// Constants and configurations
+const QUICKNODE_RPC = 'https://api.devnet.solana.com';
+const PINATA_API_KEY = '';
+const PINATA_SECRET_API_KEY = '';
+const SECRET_KEY_PATH = '';
+const PLACEHOLDER_IMAGE_PATH = path.join('', 'placeholder.png');
+const SHINY_GIF_PATH = path.join('', 'shiny.gif');
+
+// Initialize Solana connection and Metaplex
+const SOLANA_CONNECTION = new Connection(QUICKNODE_RPC, { commitment: 'finalized' });
+const secretKey = JSON.parse(fs.readFileSync(path.resolve(SECRET_KEY_PATH), 'utf8'));
+const WALLET = Keypair.fromSecretKey(new Uint8Array(secretKey));
+const METAPLEX = Metaplex.make(SOLANA_CONNECTION).use(keypairIdentity(WALLET));
+
+// Function to upload image to Pinata
+async function uploadToPinata(imageBuffer: Buffer, filename: string): Promise<string> {
+  const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+  const data = new FormData();
+  data.append('file', imageBuffer, filename);
+
+  const response = await axios.post(url, data, {
+    headers: {
+      ...data.getHeaders(),
+      'pinata_api_key': PINATA_API_KEY,
+      'pinata_secret_api_key': PINATA_SECRET_API_KEY,
+    },
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
+  });
+
+  if (response.status === 200) {
+    return `https://ipfs.io/ipfs/${response.data.IpfsHash}`;
+  } else {
+    throw new Error(`Failed to upload image to Pinata: ${response.statusText}`);
+  }
+}
+
+// Function to upload JSON metadata to Pinata
+async function uploadJsonToPinata(jsonData: any, filename: string): Promise<string> {
+  const url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS';
+  const response = await axios.post(url, {
+    pinataContent: jsonData,
+    pinataMetadata: { name: filename }
+  }, {
+    headers: {
+      'pinata_api_key': PINATA_API_KEY,
+      'pinata_secret_api_key': PINATA_SECRET_API_KEY,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 200) {
+    return `https://ipfs.io/ipfs/${response.data.IpfsHash}`;
+  } else {
+    throw new Error(`Failed to upload JSON to Pinata: ${response.statusText}`);
+  }
+}
+
+// Function to create and mint the NFT
+async function createAndMintNFT(): Promise<{ mintAddress: string; metadataUrl: string }> {
+  try {
+    const name = 'Premier League: Man City 1st';
+    const metadataDescription = 'This NFT represents a bet placed on the Premier League for Manchester City achieving the 1st Place outcome. The result is currently pending, and this NFT acts as proof of your bet in the BetForge platform. Once the season concludes, the status and value of this NFT may change depending on the result. Stay tuned to see if your bet will bring you the rewards!';
+
+    // Read placeholder and shiny GIF
+    const placeholder = await Jimp.read(PLACEHOLDER_IMAGE_PATH);
+    const gifCodec = new (require('gifwrap').GifCodec)();
+    const shinyGif = await gifCodec.decodeGif(fs.readFileSync(SHINY_GIF_PATH));
+
+    // Create GIF encoder for the final image
+    const gifEncoder = new GIFEncoder(placeholder.bitmap.width, placeholder.bitmap.height);
+    gifEncoder.start();
+    gifEncoder.setRepeat(0); // loop indefinitely
+
+    // Loop through each frame of the shiny GIF
+    for (let i = 0; i < shinyGif.frames.length; i++) {
+      const shinyFrame = shinyGif.frames[i];
+      const shinyFrameImage = new Jimp({
+        data: shinyFrame.bitmap.data,
+        width: shinyFrame.bitmap.width,
+        height: shinyFrame.bitmap.height,
+      });
+
+      // Resize the shiny frame to fit the desired position
+      shinyFrameImage.resize(50, 50);
+
+      // Clone the placeholder to create the current frame
+      const frame = placeholder.clone();
+
+      // Composite shiny GIF frame on top-right corner of the placeholder
+      const xShinyOffset = placeholder.bitmap.width - shinyFrameImage.bitmap.width - 10;
+      const yShinyOffset = 10;
+      frame.composite(shinyFrameImage, xShinyOffset, yShinyOffset);
+
+      // Add the current frame to GIF encoder
+      gifEncoder.addFrame(frame.bitmap.data);
+      gifEncoder.setDelay(shinyFrame.delayCentisecs * 10); // Set the delay for the current frame
+    }
+
+    // Finish and save the GIF
+    gifEncoder.finish();
+    const buffer = gifEncoder.out.getData();
+    fs.writeFileSync('test001.gif', buffer);
+
+    // Upload GIF to Pinata
+    const imageUrl = await uploadToPinata(buffer, `${name}.gif`);
+
+    // Create metadata
+    const metadata = {
+      name,
+      description: metadataDescription,
+      image: imageUrl,
+      attributes: [
+        { trait_type: "Rarity", value: "Common" },
+        { trait_type: "Bet Status", value: "Pending" },
+        { trait_type: "Event", value: "Premier League - Manchester City: 1st Place" }
+      ]
+    };
+
+    // Upload metadata to Pinata
+    const metadataUrl = await uploadJsonToPinata(metadata, `${name}_metadata.json`);
+
+    // Mint NFT
+    const { nft } = await METAPLEX.nfts().create({
+      uri: metadataUrl,
+      name,
+      sellerFeeBasisPoints: 500,  // 5.00% seller fee
+      symbol: "WNFT",
+      creators: [
+        { address: WALLET.publicKey, share: 100 }
+      ]
+    });
+
+    const mintAddress = nft.address.toString();
+
+    // Transfer NFT to the given address
+    const recipientAddress = new PublicKey('24HSRPVrYuiPkAVRrsYL2XHDHgHNSeoaTCKujNrdSorU');
+
+    const { blockhash, lastValidBlockHeight } = await SOLANA_CONNECTION.getLatestBlockhash();
+    const transferTransaction = METAPLEX.nfts().builders().transfer({
+      nftOrSft: nft,
+      toOwner: recipientAddress,
+      authority: WALLET,
+    }).toTransaction({
+      blockhash,
+      lastValidBlockHeight,
+    });
+
+    transferTransaction.feePayer = WALLET.publicKey;
+    const signature = await sendAndConfirmTransaction(SOLANA_CONNECTION, transferTransaction, [WALLET]);
+
+    console.log(`✅ - Minted NFT: ${mintAddress}`);
+    console.log(`📦 - Transferred NFT to: ${recipientAddress.toString()}`);
+    console.log(`🔗 - Transaction Signature: ${signature}`);
+    
+    return { mintAddress, metadataUrl };
+  } catch (error) {
+    console.error('Minting failed:', error);
+    return { mintAddress: 'default_mint_address', metadataUrl: 'default_metadata_url' };
+  }
+}
+
+// Start the NFT minting process
+createAndMintNFT();
+
+UPADATE IMAGE METADATA:
+import axios from 'axios';
+import FormData from 'form-data';
+import fs from 'fs';
+import { Connection, Keypair, PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
+import { Metaplex, keypairIdentity } from "@metaplex-foundation/js";
+
+// Constants and configurations
+const QUICKNODE_RPC = 'https://api.devnet.solana.com';
+const PINATA_API_KEY = '';
+const PINATA_SECRET_API_KEY = '';
+const SECRET_KEY_PATH = '';
+const MINT_ADDRESS = ''; // Replace with your minted NFT's mint address
+
+// Initialize Solana connection and Metaplex
+const SOLANA_CONNECTION = new Connection(QUICKNODE_RPC, { commitment: 'finalized' });
+const secretKey = JSON.parse(fs.readFileSync(SECRET_KEY_PATH, 'utf8'));
+const WALLET = Keypair.fromSecretKey(new Uint8Array(secretKey));
+const METAPLEX = Metaplex.make(SOLANA_CONNECTION).use(keypairIdentity(WALLET));
+
+// Function to upload image to Pinata
+async function uploadImageToPinata(imagePath: string): Promise<string> {
+  const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+  const data = new FormData();
+  data.append('file', fs.createReadStream(imagePath));
+
+  const response = await axios.post(url, data, {
+    headers: {
+      'pinata_api_key': PINATA_API_KEY,
+      'pinata_secret_api_key': PINATA_SECRET_API_KEY,
+      ...data.getHeaders(),
+    },
+  });
+
+  if (response.status === 200) {
+    return `https://ipfs.io/ipfs/${response.data.IpfsHash}`;
+  } else {
+    throw new Error(`Failed to upload image to Pinata: ${response.statusText}`);
+  }
+}
+
+// Function to upload updated JSON metadata to Pinata
+async function uploadJsonToPinata(jsonData: any, filename: string): Promise<string> {
+  const url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS';
+  const response = await axios.post(url, {
+    pinataContent: jsonData,
+    pinataMetadata: { name: filename }
+  }, {
+    headers: {
+      'pinata_api_key': PINATA_API_KEY,
+      'pinata_secret_api_key': PINATA_SECRET_API_KEY,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 200) {
+    return `https://ipfs.io/ipfs/${response.data.IpfsHash}`;
+  } else {
+    throw new Error(`Failed to upload JSON to Pinata: ${response.statusText}`);
+  }
+}
+
+// Function to update the image of the NFT
+async function updateNFTImage(newImagePath: string): Promise<void> {
+  try {
+    // Upload the new image to Pinata (placeholder1.png)
+    const newImageUrl = await uploadImageToPinata(newImagePath);
+
+    // Define the updated metadata with the new image URL (placeholder1.png)
+    const updatedMetadata = {
+      name: "Premier League: Man City 1st",
+      description: "This NFT represents a bet placed on the Premier League for Manchester City achieving the 1st Place outcome. The result is currently pending, and this NFT acts as proof of your bet in the BetForge platform. Once the season concludes, the status and value of this NFT may change depending on the result. Stay tuned to see if your bet will bring you the rewards!",
+      image: newImageUrl, // New image URL for placeholder1.png
+      attributes: [
+        { trait_type: "Rarity", value: "Common" },
+        { trait_type: "Bet Status", value: "Pending" }, 
+        { trait_type: "Event", value: "Premier League - Manchester City: 1st Place" }
+      ]
+    };
+
+    // Upload the updated metadata to Pinata
+    const updatedMetadataUrl = await uploadJsonToPinata(updatedMetadata, 'Updated_ManCity_Bet_Metadata_With_New_Placeholder1.png');
+
+    // Fetch the NFT object by mint address
+    const nft = await METAPLEX.nfts().findByMint({
+      mintAddress: new PublicKey(MINT_ADDRESS)
+    });
+
+    // Update the NFT metadata to point to the new JSON file with updated image
+    const { blockhash, lastValidBlockHeight } = await SOLANA_CONNECTION.getLatestBlockhash();
+    const updateTransaction = METAPLEX.nfts().builders().update({
+      nftOrSft: nft,
+      uri: updatedMetadataUrl,
+      updateAuthority: WALLET,
+    }).toTransaction({
+      blockhash,
+      lastValidBlockHeight,
+    });
+
+    updateTransaction.feePayer = WALLET.publicKey;
+
+    // Send the transaction to update the metadata on-chain
+    const signature = await sendAndConfirmTransaction(SOLANA_CONNECTION, updateTransaction, [WALLET]);
+
+    console.log(`✅ - Updated NFT image to placeholder1.png: ${MINT_ADDRESS}`);
+    console.log(`     Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`);
+  } catch (error) {
+    console.error('Failed to update NFT image:', error);
+  }
+}
+
+// Start the image update process
+updateNFTImage('');
